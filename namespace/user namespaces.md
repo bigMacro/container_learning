@@ -99,9 +99,25 @@ CapPrm:	0000000000000000
 CapEff:	0000000000000000
 ```
 
-问题的原因在于execve()执行bash时如果执行execve()的进程的eUID不为0，那么进程的权限将会被清空。为了避免这个问题，需要在执行execve()之前创建UID映射。userns_child_exec.c和ns_child.exec.c类似，只不过它支持- M和-G选项，这两个选项能够在新user namespace中创建user和group的映射。
+问题的原因在于execve()执行bash时如果执行execve()的进程的eUID不为0，那么进程的权限将会被清空。为了避免这个问题，需要在执行execve()之前创建UID映射。userns_child_exec.c和ns_child.exec.c类似，只不过它支持-M和-G选项，这两个选项能够在新user namespace中创建user和group的映射。前面介绍过，可以在父进程和子进程中创建UID映射。但是如果在子进程中创建映射的话，映射的ID需要包括子进程的eUID。为了能够映射任意的UID，userns_child_exec.c通过父进程设置UID映射。此外，通过父进程写映射文件设置UID/GID需要为userns_child_exec设置权限：
 
-TODO：例子
+```
+setcap 'CAP_SETUID,CAP_SETGID,CAP_DAC_OVERRIDE+ep' userns_child_exec
+```
+
+我们重新以下命令进行实验，就能看到映射正常地建立：
+
+```
+$ ./userns_child_exec -U -M '0 1000 1' -G '0 1000 1' bash
+root@ubuntu:/namespace# id -u
+0
+root@ubuntu:/namespace# id -g
+0
+root@ubuntu:/namespace# cat /proc/$$/status | egrep 'Cap(Inh|Prm|Eff)'
+CapInh:	0000000000000000
+CapPrm:	0000003fffffffff
+CapEff:	0000003fffffffff
+```
 
 ## 观测user ID和group ID的映射
 
