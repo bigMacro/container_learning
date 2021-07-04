@@ -66,7 +66,7 @@ eUID = 0;  eGID = 0;  capabilities: = cap_chown,cap_dac_override,cap_dac_read_se
 
 ## 映射文件规则
 
-定义映射文件是一次性的操作，即只能执行一次写uid_map(gid_map)文件。除此之外，还需要遵循以下规则：
+定义映射文件是一次性的操作，即只能执行一次写uid_map(gid_map)文件。/proc/PID/uid_map(gid_map)的拥有者是创建这个进程所属user namespace的用户，并且只能由这个用户写(特权用户也可)。除此之外，还需要遵循以下规则：
 
 1. 写进程必须在PID所属的user namespace中拥有CAP_SETUID(CAP_SETGID)权限
 2. 写进程必须是PID所属的user namespace或者父user namespace中的进程
