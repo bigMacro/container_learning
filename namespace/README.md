@@ -1,0 +1,1 @@
+本系列通过翻译、总结[Namespaces](https://lwn.net/Articles/531114/#series_index)系列文章，详细的介绍了Namespace相关知识。
