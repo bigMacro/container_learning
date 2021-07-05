@@ -121,4 +121,64 @@ CapEff:	0000003fffffffff
 
 ## 观测user ID和group ID的映射
 
-TODO
+根据ID-outside-ns的解释规则，如果打开/proc/PID/uid_map(gid_map)的进程与PID所在的user namespace相同，ID-outside-ns解释为父user namespace的ID，如果user namespace不一致，则解释为打开文件的进程所在的user namespace的ID。我们可以使用这条规则查看ID映射治理情况。
+
+
+
+首先创建一个user namespace，并且在里面运行shell：
+
+```
+$ id -u
+1000
+$ exit
+root@ubuntu:~# cd /namespace/
+root@ubuntu:/namespace# su test
+$ id -u
+1000
+$ ./userns_child_exec -U -M '0 1000 1' -G '0 1000 1' bash
+root@ubuntu:/namespace# echo $$
+8895
+root@ubuntu:/namespace# cat /proc/8895/uid_map
+         0       1000          1
+root@ubuntu:/namespace# id -u
+0
+```
+
+现在，我们切换到另一个ternimal创建另外一个user namespace，并且使用不同的ID映射：
+
+```
+$ ./userns_child_exec -U -M '200 1000 1' -G '200 1000 1' bash
+groups: cannot find name for group ID 200
+I have no name!@ubuntu:/namespace$ cat /proc/self/uid_map
+       200       1000          1
+I have no name!@ubuntu:/namespace$ id -u
+200
+I have no name!@ubuntu:/namespace$ echo $$
+8953
+I have no name!@ubuntu:/namespace$
+```
+
+继续在第二个terminal中查看第一个user namespace中的进程的映射关系：
+
+```
+I have no name!@ubuntu:/namespace$ cat /proc/8895/uid_map
+         0        200          1
+```
+
+这意味着第一个user namespace的UID 0映射到了当前user namespace的UID为200。如果我们在第一个ternimal查看第二个user namespace中的进程映射关系：
+
+```
+root@ubuntu:/namespace# cat /proc/8953/uid_map
+       200          0          1
+```
+
+同样的，因为打开8953进程的user namespace与8953进程所在的user namespace并不相同，所以ID-outside-n s为0。当然，如果在相同的user namespace，ID-outside-ns就是父user namespace的ID，因为我们在两个user namespace中都将ID映射到了1000，所以我们可以通过在各自的user namespace执行以下命令进行验证：
+
+```
+root@ubuntu:/namespace# cat /proc/8895/uid_map
+         0       1000          1
+ ---------------------------------------------
+ I have no name!@ubuntu:/namespace$ cat /proc/8953/uid_map
+       200       1000          1
+```
+
