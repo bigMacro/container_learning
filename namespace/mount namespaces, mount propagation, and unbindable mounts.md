@@ -196,4 +196,26 @@ MS_UNBINDABLE是为了解决一个被称为”挂载点爆炸“的问题，即�
 /dev/sda1 on /home/henry/home/cecilia
 /dev/sdb6 on /home/henry/home/cecilia/mntX
 ```
+在/home/henry下面，我们不仅添加了/mntX目录，也递归地添加了/home/cecilia目录。如果我们继续为第三个用户执行同样的操作，挂载目录就会爆炸。
+我们通过--make-unbindable选择来禁止复制bind mount。
 
+```
+# mount --rbind --make-unbindable / /home/cecilia
+# cat /proc/self/mountinfo | grep /home/cecilia | sed 's/ - .*//' 
+108 83 8:2 / /home/cecilia rw,relatime unbindable
+...
+```
+在/proc/self/mountinfo中，禁止复制bind mount通过unbindable标记表示。现在我们为之前的用户都加上--make-unbindable选项，挂载点爆炸的问题就背解决了：
+```
+# mount --rbind --make-unbindable / /home/henry
+# mount --rbind --make-unbindable / /home/otto
+# mount | awk '{print $1, $2, $3}'
+/dev/sda1 on /
+/dev/sdb6 on /mntX
+/dev/sda1 on /home/cecilia
+/dev/sdb6 on /home/cecilia/mntX
+/dev/sda1 on /home/henry
+/dev/sdb6 on /home/henry/mntX
+/dev/sda1 on /home/otto
+/dev/sdb6 on /home/otto/mntX
+```
